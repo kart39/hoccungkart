@@ -3578,11 +3578,9 @@
     </div>
 
     <footer class="site-foot">
-      <span>hoccungkart — Vật lý phổ thông</span>
+      <span>@hoccungkart</span>
       <a onclick="openProgressModal()">Tiến trình học tập</a>
       <a onclick="openHistoryModal()">Lịch sử hoạt động</a>
-      <a href="privacy.html">Chính sách bảo mật</a>
-      <a href="terms.html">Điều khoản sử dụng</a>
     </footer>
   </div>
 
@@ -3979,7 +3977,7 @@
     <div class="hist-head">
       <div class="hist-head-txt">
         <h4>Lịch sử học bài</h4>
-        <p id="histSub">0 hoạt động · đồng bộ trên mọi thiết bị</p>
+        <p id="histSub">0 hoạt động · lưu trên máy này</p>
       </div>
       <button class="quiz-close" onclick="closeHistoryModal()">✕</button>
     </div>
@@ -8065,7 +8063,24 @@ function videoEmbedHtml(url){
 
 
 /* ============ LỊCH SỬ HỌC BÀI — LƯU THEO TÀI KHOẢN ============ */
-let userHistory = []; // [{t, type:'open'|'quiz'|'done', itemId, title, where, score?, total?, passed?}]
+let userHistory = []; // [{t, type:'open'|'quiz'|'done'|'exam', itemId, title, where, score?, total?, passed?}]
+// Lịch sử luôn lưu trên máy (không cần đăng nhập); đã đăng nhập thì gộp thêm bản trên tài khoản nếu đọc được
+const HISTORY_KEY = 'trongtam_history_v1';
+function loadLocalHistory(){
+  try{ const a = JSON.parse(localStorage.getItem(HISTORY_KEY)); return Array.isArray(a) ? a : []; }catch(e){ return []; }
+}
+function saveLocalHistory(){
+  try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(userHistory.slice(-100))); }catch(e){}
+}
+function mergeHistory(a, b){
+  const seen = new Set(), out = [];
+  a.concat(b).sort((x, y) => x.t - y.t).forEach(h => {
+    const k = h.t + '|' + h.type + '|' + h.itemId;
+    if(!seen.has(k)){ seen.add(k); out.push(h); }
+  });
+  return out.slice(-100);
+}
+userHistory = loadLocalHistory();
 
 function itemTitleByKey(section, key){
   const list = itemsInGrade(section);
@@ -8077,13 +8092,13 @@ function sectionLabelNow(section){
 }
 
 function logHistory(entry){
-  if(!currentUser) return; // chỉ ghi cho tài khoản đã đăng nhập
   const last = userHistory[userHistory.length - 1];
   // Mở đi mở lại cùng 1 bài trong vòng 5 phút thì không ghi trùng
   if(entry.type === 'open' && last && last.type === 'open' && last.itemId === entry.itemId && Date.now() - last.t < 5 * 60 * 1000) return;
   userHistory.push({ t: Date.now(), ...entry });
   if(userHistory.length > 100) userHistory = userHistory.slice(-100); // giữ 100 hoạt động gần nhất
-  scheduleProgressSave();
+  saveLocalHistory();
+  if(currentUser) scheduleProgressSave();
 }
 
 function histTimeAgo(ms){
@@ -8170,7 +8185,7 @@ function renderHistoryList(){
   histRows = userHistory.slice().reverse().filter(h => histFilter === 'all' || histKind(h) === histFilter);
 
   const sub = document.getElementById('histSub');
-  if(sub) sub.textContent = `${userHistory.length} hoạt động · đồng bộ trên mọi thiết bị`;
+  if(sub) sub.textContent = `${userHistory.length} hoạt động · lưu trên máy này`;
   document.querySelectorAll('#histFilters .hist-chip').forEach(b=>{
     b.classList.toggle('active', b.dataset.f === histFilter);
   });
@@ -8212,10 +8227,11 @@ function openHistoryItem(idx){
 async function clearHistory(){
   if(!userHistory.length) return;
   const ok = await appConfirm('Xoá lịch sử học bài?',
-    `${userHistory.length} hoạt động sẽ bị xoá khỏi mọi thiết bị. Tiến trình đã đánh dấu vẫn được giữ nguyên.`,
+    `${userHistory.length} hoạt động sẽ bị xoá khỏi máy này. Tiến trình đã đánh dấu vẫn được giữ nguyên.`,
     { ok:'Xoá lịch sử', cancel:'Giữ lại', danger:true });
   if(!ok) return;
   userHistory = [];
+  saveLocalHistory();
   if(currentUser) scheduleProgressSave();
   renderHistoryList();
   updateAccountBar();
@@ -8351,7 +8367,7 @@ function renderProgressBody(){
 
   const sub = document.getElementById('progSub');
   if(sub) sub.textContent = all.total
-    ? `${all.done}/${all.total} mục đã học xong · đồng bộ trên mọi thiết bị`
+    ? `${all.done}/${all.total} mục đã học xong · lưu trên máy này`
     : 'Chưa có nội dung nào để thống kê';
 
   if(!all.total){
@@ -9983,7 +9999,7 @@ function initStudentAuth(){
       updateAccountBar(); // cập nhật streak / điểm TB sau khi có lịch sử
     } else {
       progress = loadProgress(); // chưa đăng nhập -> dùng tiến trình lưu trên máy này
-      userHistory = [];
+      userHistory = loadLocalHistory();
     }
     renderAll();
   });
@@ -9994,7 +10010,8 @@ async function loadCloudProgress(user){
   try{
     const doc = await firebase.firestore().collection(USERS_COLLECTION).doc(user.uid).get();
     const cloud = (doc.exists && doc.data().progress) || {};
-    userHistory = (doc.exists && doc.data().history) || [];
+    userHistory = mergeHistory((doc.exists && doc.data().history) || [], loadLocalHistory());
+    saveLocalHistory();
     const local = loadProgress();
     progress = { ...cloud };
     let merged = false;
@@ -10006,6 +10023,7 @@ async function loadCloudProgress(user){
   }catch(err){
     console.error('Lỗi tải tiến trình từ tài khoản:', err);
     progress = loadProgress();
+    userHistory = loadLocalHistory();
   }
 }
 

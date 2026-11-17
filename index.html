@@ -8131,6 +8131,9 @@ function logHistory(entry){
   if(currentUser) scheduleProgressSave();
 }
 
+/* Chữ cho biết dữ liệu được lưu ở đâu: đã đăng nhập thì đồng bộ theo tài khoản, khách thì chỉ trên máy này */
+function syncLabel(){ return currentUser ? 'đồng bộ theo tài khoản' : 'lưu trên máy này'; }
+
 function histTimeAgo(ms){
   const sec = Math.floor((Date.now() - ms) / 1000);
   if(sec < 60) return 'vừa xong';
@@ -8215,7 +8218,7 @@ function renderHistoryList(){
   histRows = userHistory.slice().reverse().filter(h => histFilter === 'all' || histKind(h) === histFilter);
 
   const sub = document.getElementById('histSub');
-  if(sub) sub.textContent = `${userHistory.length} hoạt động · lưu trên máy này`;
+  if(sub) sub.textContent = `${userHistory.length} hoạt động · ${syncLabel()}`;
   document.querySelectorAll('#histFilters .hist-chip').forEach(b=>{
     b.classList.toggle('active', b.dataset.f === histFilter);
   });
@@ -8257,7 +8260,7 @@ function openHistoryItem(idx){
 async function clearHistory(){
   if(!userHistory.length) return;
   const ok = await appConfirm('Xoá lịch sử học bài?',
-    `${userHistory.length} hoạt động sẽ bị xoá khỏi máy này. Tiến trình đã đánh dấu vẫn được giữ nguyên.`,
+    `${userHistory.length} hoạt động sẽ bị xoá khỏi ${currentUser ? 'tài khoản của bạn (mọi thiết bị)' : 'máy này'}. Tiến trình đã đánh dấu vẫn được giữ nguyên.`,
     { ok:'Xoá lịch sử', cancel:'Giữ lại', danger:true });
   if(!ok) return;
   userHistory = [];
@@ -8397,7 +8400,7 @@ function renderProgressBody(){
 
   const sub = document.getElementById('progSub');
   if(sub) sub.textContent = all.total
-    ? `${all.done}/${all.total} mục đã học xong · lưu trên máy này`
+    ? `${all.done}/${all.total} mục đã học xong · ${syncLabel()}`
     : 'Chưa có nội dung nào để thống kê';
 
   if(!all.total){

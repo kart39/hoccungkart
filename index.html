@@ -7625,7 +7625,7 @@ function renderReaderViewer(section){
         <button class="zoom-fit" onclick="zoomReset('${section}')" title="Vừa khung — 100% (Ctrl 0)">⤢</button>
       </div>` : '',
     link: (fileUrl && (section !== 'exercises' || docs.length))
-      ? `<a href="${escAttr(fileUrl)}" target="_blank" rel="noopener" class="reader-newtab-link">Mở tab mới ↗</a>` : ''
+      ? '' : ''
   });
 
   if(mdUrl){
@@ -11178,5 +11178,12 @@ if(!isConfigured()){
   });
 })();
 </script>
+<style id="guardCss">.reader-viewer-body,.lt-article,.exam-pdf,canvas,img{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}img,canvas{-webkit-user-drag:none}input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}@media print{body{display:none!important}}</style>
+<script id="guardJs">(function(){var ok=function(t){return t&&t.closest&&t.closest('input,textarea,[contenteditable]')};
+document.addEventListener('contextmenu',function(e){if(!ok(e.target))e.preventDefault()});
+document.addEventListener('dragstart',function(e){if(e.target&&/^(IMG|CANVAS|A)$/.test(e.target.tagName))e.preventDefault()});
+document.addEventListener('copy',function(e){if(!ok(e.target))e.preventDefault()});
+document.addEventListener('keydown',function(e){var k=(e.key||'').toLowerCase(),c=e.ctrlKey||e.metaKey;
+if(k==='f12'||(c&&(k==='s'||k==='p'||k==='u'))||(c&&e.shiftKey&&(k==='i'||k==='j'||k==='c'))){e.preventDefault();e.stopPropagation()}},true);})();</script>
 <!-- Cloudflare Pages Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "161720efcdd14deb99fabb38c4a84ec9"}'></script><!-- Cloudflare Pages Analytics --></body>
 </html>
